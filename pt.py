@@ -1,18 +1,10 @@
 from flask import Flask, request, redirect, url_for, session
-from pyngrok import ngrok
 import socket
 
 app = Flask(__name__)
-app.secret_key = 'gizli-key'  # oturum yönetimi için gerekli
+app.secret_key = 'gizli-key'  # oturum için gerekli
 
-# 🔐 Ngrok Token – sadece ilk kez çalıştırırken ekle
-ngrok.set_auth_token("BURAYA_NGROK_TOKENINI_YAZ")  # örn: 2JxkExxx...
-
-# 🌐 Flask'ı dışa açan ngrok tünelini başlat
-public_url = ngrok.connect(5000)
-print(f"🔗 Uygulama bağlantısı (herkese açık): {public_url}")
-
-# 🌐 Banner Grabbing Fonksiyonu
+# 🌐 Banner Grabbing Fonksiyonu (siteye göre)
 def banner_grab_by_site(domain, port):
     try:
         ip = socket.gethostbyname(domain)
@@ -28,7 +20,7 @@ def banner_grab_by_site(domain, port):
     except Exception as e:
         return f"Hata: {e}"
 
-# 🔑 Giriş Sayfası
+# 🔐 Giriş Sayfası
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -47,7 +39,7 @@ def login():
         </form>
     '''
 
-# 📡 Banner Grabbing Sayfası
+# 📡 Banner Sayfası
 @app.route('/banner', methods=['GET', 'POST'])
 def banner_page():
     if not session.get('authenticated'):
@@ -71,12 +63,13 @@ def banner_page():
     html += '<br><a href="/logout">Çıkış Yap</a>'
     return html
 
-# 🚪 Oturumdan çık
+# Oturumdan çıkış
 @app.route('/logout')
 def logout():
     session.pop('authenticated', None)
     return redirect(url_for('login'))
 
-# ▶️ Flask başlat
+# ▶️ Flask Uygulamasını başlat
 if __name__ == '__main__':
-    app.run(port=5000)
+    # Tüm ağdan erişim için host="0.0.0.0"
+    app.run(host="0.0.0.0", port=5000, debug=True)
