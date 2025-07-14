@@ -37,4 +37,4 @@ def login():
             session['authenticated'] = True
             return redirect(url_for('banner_page'))
         else:
-            return "<h3>❌ Hatalı anahtar!</h3><a href='/'>
+            return "<h3>❌ Hatalı anahtar!</h3><a href='/'>"
