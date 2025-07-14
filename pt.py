@@ -1,35 +1,76 @@
-import requests
-import threading
-import time
+from flask import Flask, request, redirect, url_for, session
 
-# Hedef: kendi test sunucun olabilir (örnek: http://localhost:5000)
-url = "https://www.instagram.com/efe_____mfjr/"
+import socket
 
-# Gönderilecek istek sayısı (simülasyon)
-request_count = 100
-thread_count = 10
+app = Flask(__name__)
+app.secret_key = 'guclu-bir-secret'  # oturum için gerekli
 
-def send_requests():
-    for _ in range(request_count // thread_count):
-        try:
-            response = requests.get(url)
-            print(f"Status Code: {response.status_code}")
-        except Exception as e:
-            print(f"Hata: {e}")
+# Banner grabbing fonksiyonu
+def banner_grab(ip, port):
+    try:
+        s = socket.socket()
+        s.settimeout(2)
+        s.connect((ip, port))
+        s.send(b"HEAD / HTTP/1.1\r\nHost: " + ip.encode() + b"\r\n\r\n")
+        banner = s.recv(1024).decode(errors="ignore").strip()
+        s.close()
+        return banner if banner else "Banner alınamadı."
+    except socket.timeout:
+        return "Zaman aşımı!"
+    except Exception as e:
+        return f"Hata: {e}"
 
-# Thread'leri başlat
-threads = []
+# Giriş ekranı
+@app.route('/', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        key = request.form.get('key')
+        if key == 'adminpro':
+            session['authenticated'] = True
+            return redirect(url_for('banner_page'))
+        else:
+            return """
+            <h3>Hatalı anahtar!</h3>
+            <a href='/'>Tekrar dene</a>
+            """
 
-start_time = time.time()
+    return '''
+        <h2>Giriş Anahtarı</h2>
+        <form method="post">
+            <input type="password" name="key" placeholder="Anahtar" required>
+            <button type="submit">Giriş</button>
+        </form>
+    '''
 
-for i in range(thread_count):
-    t = threading.Thread(target=send_requests)
-    threads.append(t)
-    t.start()
+# Asıl banner grabbing sayfası
+@app.route('/banner', methods=['GET', 'POST'])
+def banner_page():
+    if not session.get('authenticated'):
+        return redirect(url_for('login'))
 
-# Tüm thread'lerin bitmesini bekle
-for t in threads:
-    t.join()
+    html = """
+    <h2>Banner Grabbing Tool</h2>
+    <form method="post">
+        <input type="text" name="ip" placeholder="IP adresi" required>
+        <input type="number" name="port" placeholder="Port" required>
+        <button type="submit">Tarama Başlat</button>
+    </form>
+    """
 
-end_time = time.time()
-print(f"Toplam süre: {end_time - start_time:.2f} saniye")
+    if request.method == 'POST':
+        ip = request.form.get('ip')
+        port = int(request.form.get('port'))
+        result = banner_grab(ip, port)
+        html += f"<h3>Sonuç ({ip}:{port})</h3><pre>{result}</pre>"
+
+    html += '<br><a href="/logout">Çıkış Yap</a>'
+    return html
+
+# Çıkış işlemi
+@app.route('/logout')
+def logout():
+    session.pop('authenticated', None)
+    return redirect(url_for('login'))
+
+if __name__ == '__main__':
+    app.run(debug=True)
