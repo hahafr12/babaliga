@@ -2,7 +2,7 @@ from flask import Flask, request, redirect, url_for, session
 import socket
 
 app = Flask(__name__)
-app.secret_key = 'gizli-key'  # oturum için gerekli
+app.secret_key = 'xhackbannerx'  # oturum için gerekli
 
 # 🌐 Banner Grabbing Fonksiyonu (siteye göre)
 def banner_grab_by_site(domain, port):
