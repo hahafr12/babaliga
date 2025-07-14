@@ -1,67 +1,35 @@
-from flask import Flask, request
-from user_agents import parse
-from datetime import datetime
-import json
 import requests
+import threading
+import time
 
-app = Flask(__name__)
+# Hedef: kendi test sunucun olabilir (örnek: http://localhost:5000)
+url = "https://www.instagram.com/efe_____mfjr/"
 
-def get_location(ip):
-    try:
-        response = requests.get(f"https://ipapi.co/{ip}/json/")
-        if response.status_code == 200:
-            data = response.json()
-            return {
-                "country": data.get("country_name"),
-                "city": data.get("city"),
-                "org": data.get("org"),
-                "region": data.get("region")
-            }
-    except:
-        return {}
-    return {}
+# Gönderilecek istek sayısı (simülasyon)
+request_count = 100
+thread_count = 10
 
-def log_request(info):
-    try:
-        with open("logs.json", "a") as file:
-            file.write(json.dumps(info, ensure_ascii=False) + "\n")
-    except Exception as e:
-        print("Loglama hatası:", e)
+def send_requests():
+    for _ in range(request_count // thread_count):
+        try:
+            response = requests.get(url)
+            print(f"Status Code: {response.status_code}")
+        except Exception as e:
+            print(f"Hata: {e}")
 
-@app.route("/")
-def index():
-    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
-    user_agent_str = request.headers.get('User-Agent')
-    user_agent = parse(user_agent_str)
+# Thread'leri başlat
+threads = []
 
-    device_type = "Mobil" if user_agent.is_mobile else "Tablet" if user_agent.is_tablet else "PC"
+start_time = time.time()
 
-    location = get_location(ip_address)
+for i in range(thread_count):
+    t = threading.Thread(target=send_requests)
+    threads.append(t)
+    t.start()
 
-    log_data = {
-        "timestamp": str(datetime.now()),
-        "ip": ip_address,
-        "device": device_type,
-        "browser": user_agent.browser.family,
-        "os": user_agent.os.family,
-        "location": location,
-        "user_agent": user_agent_str
-    }
+# Tüm thread'lerin bitmesini bekle
+for t in threads:
+    t.join()
 
-    log_request(log_data)
-
-    return f"""
-    <h2>Cihaz Bilgilerin</h2>
-    <ul>
-        <li><strong>IP:</strong> {ip_address}</li>
-        <li><strong>Tarayıcı:</strong> {user_agent.browser.family}</li>
-        <li><strong>İşletim Sistemi:</strong> {user_agent.os.family}</li>
-        <li><strong>Cihaz Türü:</strong> {device_type}</li>
-        <li><strong>Şehir:</strong> {location.get('city', 'Bilinmiyor')}</li>
-        <li><strong>Ülke:</strong> {location.get('country', 'Bilinmiyor')}</li>
-        <li><strong>İnternet Sağlayıcı:</strong> {location.get('org', 'Bilinmiyor')}</li>
-    </ul>
-    """
-
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
+end_time = time.time()
+print(f"Toplam süre: {end_time - start_time:.2f} saniye")
