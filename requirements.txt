@@ -1,0 +1,10 @@
+flask
+flask-login
+flask-sqlalchemy
+flask-mail
+dnspython
+requests
+sentry-sdk
+flask-wtf
+wtforms
+tldextract
